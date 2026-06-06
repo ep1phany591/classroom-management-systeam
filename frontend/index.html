@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>教室管理系统</title>
+    <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="app">
+    <div v-if="!user" class="login-container">
+        <div class="login-box">
+            <h2>教室管理系统</h2>
+            <el-form :model="loginForm" label-width="60px">
+                <el-form-item label="账号"><el-input v-model="loginForm.username" placeholder="请输入用户名"></el-input></el-form-item>
+                <el-form-item label="密码"><el-input v-model="loginForm.password" type="password" placeholder="请输入密码" @keyup.enter="doLogin"></el-input></el-form-item>
+                <el-form-item label="角色">
+                    <el-radio-group v-model="loginForm.role">
+                        <el-radio label="admin">管理员</el-radio><el-radio label="teacher">教师</el-radio><el-radio label="student">学生</el-radio>
+                    </el-radio-group>
+                </el-form-item>
+                <el-form-item><el-button type="primary" @click="doLogin" style="width:100%">登录</el-button></el-form-item>
+            </el-form>
+            <div class="login-hint">管理员 admin/123456 · 教师 t001/123456 · 学生 s001/123456</div>
+        </div>
+    </div>
+
+    <div v-else>
+        <div class="top-nav">
+            <div class="brand">教室管理系统</div>
+            <div class="nav-center">
+                <el-menu v-if="user.role==='admin'" mode="horizontal" :default-active="page" :ellipsis="false" @select="navigate">
+                    <el-menu-item index="admin-dashboard">首页</el-menu-item>
+                    <el-sub-menu index="base"><template #title>基础数据</template>
+                        <el-menu-item index="admin-list">管理员</el-menu-item><el-menu-item index="teacher-list">教师</el-menu-item>
+                        <el-menu-item index="student-list">学生</el-menu-item><el-menu-item index="semester-list">学期</el-menu-item>
+                        <el-menu-item index="course-list">课程</el-menu-item><el-menu-item index="classroom-list">教室</el-menu-item>
+                    </el-sub-menu>
+                    <el-menu-item index="borrow-list">借用管理</el-menu-item><el-menu-item index="free-query">空闲查询</el-menu-item>
+                    <el-menu-item index="schedule-query">排课查询</el-menu-item>
+                </el-menu>
+                <el-menu v-else-if="user.role==='teacher'" mode="horizontal" :default-active="page" :ellipsis="false" @select="navigate">
+                    <el-menu-item index="teacher-dashboard">首页</el-menu-item><el-menu-item index="teacher-courses">我的课程</el-menu-item>
+                    <el-menu-item index="borrow-add">借用教室</el-menu-item><el-menu-item index="teacher-borrows">我的借用</el-menu-item>
+                    <el-menu-item index="free-query">空闲查询</el-menu-item>
+                </el-menu>
+                <el-menu v-else mode="horizontal" :default-active="page" :ellipsis="false" @select="navigate">
+                    <el-menu-item index="student-dashboard">首页</el-menu-item><el-menu-item index="student-courses">课程查看</el-menu-item>
+                    <el-menu-item index="student-schedule">排课查询</el-menu-item><el-menu-item index="free-query">空闲查询</el-menu-item>
+                </el-menu>
+            </div>
+            <div class="nav-right"><span>{{ user.name }}（{{ roleName }}）</span><el-button size="small" text @click="logout">退出</el-button></div>
+        </div>
+
+        <div class="main-content">
+            <div v-if="page.endsWith('-dashboard')" class="table-card">
+                <template v-if="page==='admin-dashboard'">
+                    <el-row :gutter="16"><el-col :span="6" v-for="item in stats" :key="item.label">
+                        <div class="stat-card"><div class="num">{{ item.value }}</div><div class="label">{{ item.label }}</div></div>
+                    </el-col></el-row>
+                </template>
+                <el-empty v-else description="欢迎使用教室管理系统，请从上方菜单开始操作"></el-empty>
+            </div>
+
+            <div class="table-card" v-if="currentColumns.length">
+                <div class="search-bar">
+                    <el-input v-if="!['admin-list','semester-list'].includes(page)" v-model="searchName" placeholder="按名称搜索" clearable style="width:200px" size="small"></el-input>
+                    <el-button v-if="canEdit" type="primary" size="small" @click="openDialog(null)">新增</el-button>
+                    <el-button size="small" @click="loadTable">刷新</el-button>
+                </div>
+                <el-table :data="tableData" stripe v-loading="tableLoading" size="small">
+                    <el-table-column v-for="col in currentColumns" :key="col.prop" :prop="col.prop" :label="col.label" :width="col.width"></el-table-column>
+                    <el-table-column v-if="canEdit" label="操作" width="140" fixed="right"><template #default="scope">
+                        <el-button size="small" text @click="openDialog(scope.row)">编辑</el-button>
+                        <el-button size="small" text type="danger" @click="doDelete(scope.row.id)">删除</el-button>
+                    </template></el-table-column>
+                </el-table>
+            </div>
+
+            <div class="table-card" v-if="page==='borrow-list'||page==='teacher-borrows'">
+                <div class="search-bar">
+                    <el-date-picker v-model="borrowDate" type="date" value-format="YYYY-MM-DD" placeholder="选择日期" clearable size="small"></el-date-picker>
+                    <el-button type="primary" size="small" @click="loadBorrows">查询</el-button><el-button size="small" @click="openBorrowDialog">新增借用</el-button>
+                </div>
+                <el-table :data="tableData" stripe size="small">
+                    <el-table-column prop="id" label="ID" width="60"></el-table-column><el-table-column prop="classroomId" label="教室 ID" width="80"></el-table-column>
+                    <el-table-column prop="teacherId" label="教师 ID" width="80"></el-table-column><el-table-column prop="courseId" label="课程 ID" width="80"></el-table-column>
+                    <el-table-column prop="borrowDate" label="日期" width="110"></el-table-column><el-table-column label="节次" width="90"><template #default="scope">{{ scope.row.startPeriod }}-{{ scope.row.endPeriod }}</template></el-table-column>
+                    <el-table-column prop="purpose" label="用途"></el-table-column><el-table-column label="状态" width="90"><template #default="scope">
+                        <el-tag :type="scope.row.borrowStatus===1?'success':'info'">{{ scope.row.borrowStatus===1?'已借用':'已取消' }}</el-tag>
+                    </template></el-table-column>
+                    <el-table-column label="操作" width="130"><template #default="scope">
+                        <el-button v-if="scope.row.borrowStatus===1" size="small" text type="warning" @click="cancelBorrow(scope.row.id)">取消</el-button>
+                        <el-button v-if="user.role==='admin'" size="small" text type="danger" @click="doDelete(scope.row.id)">删除</el-button>
+                    </template></el-table-column>
+                </el-table>
+            </div>
+
+            <div class="table-card" v-if="page==='borrow-add'">
+                <h3>教室借用申请</h3><el-button type="primary" @click="openBorrowDialog">填写申请</el-button>
+            </div>
+
+            <div class="table-card" v-if="page==='free-query'">
+                <h3>教室空闲查询</h3><div class="search-bar">
+                    <el-date-picker v-model="freeDate" type="date" value-format="YYYY-MM-DD" placeholder="选择日期"></el-date-picker>
+                    <el-button type="primary" @click="loadDailyFree">查询指定日期</el-button><el-button @click="loadWeeklyFree">查看本周统计</el-button>
+                </div>
+                <el-table v-if="freeTableData.length" :data="freeTableData" stripe size="small">
+                    <el-table-column prop="classroomName" label="教室"></el-table-column><el-table-column prop="building" label="教学楼"></el-table-column>
+                    <el-table-column prop="capacity" label="容量"></el-table-column><el-table-column prop="freePeriods" label="空闲节次"></el-table-column>
+                </el-table>
+                <el-table v-if="weeklyFreeData.length" :data="weeklyFreeData" stripe size="small">
+                    <el-table-column prop="classroomName" label="教室"></el-table-column><el-table-column prop="building" label="教学楼"></el-table-column>
+                    <el-table-column label="本周占用次数"><template #default="scope">{{ Object.values(scope.row.dayBorrowCount).reduce((sum,n)=>sum+n,0) }}</template></el-table-column>
+                </el-table>
+            </div>
+
+            <div class="table-card" v-if="page==='schedule-query'||page==='student-schedule'">
+                <h3>排课查询</h3><div class="search-bar">
+                    <el-date-picker v-model="scheduleDate" type="date" value-format="YYYY-MM-DD" placeholder="选择日期"></el-date-picker>
+                    <el-button type="primary" @click="loadDailySchedule">查询指定日期</el-button><el-button @click="loadWeeklySchedule">查看本周</el-button>
+                </div>
+                <el-table v-if="scheduleTableData.length" :data="scheduleTableData" stripe size="small">
+                    <el-table-column prop="borrowDate" label="日期"></el-table-column><el-table-column prop="classroomId" label="教室 ID"></el-table-column>
+                    <el-table-column prop="teacherId" label="教师 ID"></el-table-column><el-table-column label="节次"><template #default="scope">{{ scope.row.startPeriod }}-{{ scope.row.endPeriod }}</template></el-table-column>
+                    <el-table-column prop="purpose" label="用途"></el-table-column>
+                </el-table>
+                <div v-for="day in weeklyScheduleData" :key="day.date" style="margin-top:14px"><strong>{{ day.date }} {{ day.dayOfWeek }}</strong>
+                    <el-table :data="day.borrows" stripe size="small"><el-table-column prop="classroomId" label="教室 ID"></el-table-column>
+                        <el-table-column label="节次"><template #default="scope">{{ scope.row.startPeriod }}-{{ scope.row.endPeriod }}</template></el-table-column>
+                        <el-table-column prop="purpose" label="用途"></el-table-column></el-table>
+                </div>
+            </div>
+        </div>
+
+        <el-dialog v-model="dialogVisible" :title="currentEditId?'编辑记录':'新增记录'" width="480px">
+            <el-form :model="dialogForm" label-width="90px"><el-form-item v-for="field in dialogFields" :key="field.prop" :label="field.label">
+                <el-switch v-if="field.type==='switch'" v-model="dialogForm[field.prop]" :active-value="1" :inactive-value="0"></el-switch>
+                <el-date-picker v-else-if="field.type==='date'" v-model="dialogForm[field.prop]" value-format="YYYY-MM-DD" style="width:100%"></el-date-picker>
+                <el-input-number v-else-if="field.type==='number'" v-model="dialogForm[field.prop]" :min="0" style="width:100%"></el-input-number>
+                <el-input v-else v-model="dialogForm[field.prop]" :type="field.prop==='password'?'password':'text'"></el-input>
+            </el-form-item></el-form>
+            <template #footer><el-button @click="dialogVisible=false">取消</el-button><el-button type="primary" @click="doSave">保存</el-button></template>
+        </el-dialog>
+
+        <el-dialog v-model="borrowDialogVisible" title="新增教室借用" width="480px">
+            <el-form :model="borrowForm" label-width="90px">
+                <el-form-item label="教室"><el-select v-model="borrowForm.classroomId" style="width:100%"><el-option v-for="r in classroomList" :key="r.id" :label="r.name+' ('+r.building+')'" :value="r.id"></el-option></el-select></el-form-item>
+                <el-form-item v-if="user.role==='admin'" label="教师"><el-select v-model="borrowForm.teacherId" style="width:100%"><el-option v-for="t in teacherList" :key="t.id" :label="t.name" :value="t.id"></el-option></el-select></el-form-item>
+                <el-form-item label="课程"><el-select v-model="borrowForm.courseId" clearable style="width:100%"><el-option v-for="c in courseList" :key="c.id" :label="c.name" :value="c.id"></el-option></el-select></el-form-item>
+                <el-form-item label="日期"><el-date-picker v-model="borrowForm.borrowDate" value-format="YYYY-MM-DD" style="width:100%"></el-date-picker></el-form-item>
+                <el-form-item label="节次"><el-input-number v-model="borrowForm.startPeriod" :min="1" :max="10"></el-input-number> 至 <el-input-number v-model="borrowForm.endPeriod" :min="1" :max="10"></el-input-number></el-form-item>
+                <el-form-item label="用途"><el-input v-model="borrowForm.purpose" maxlength="200" show-word-limit></el-input></el-form-item>
+            </el-form><template #footer><el-button @click="borrowDialogVisible=false">取消</el-button><el-button type="primary" @click="doBorrow">提交</el-button></template>
+        </el-dialog>
+    </div>
+</div>
+<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script><script src="https://unpkg.com/element-plus"></script>
+<script src="https://unpkg.com/axios/dist/axios.min.js"></script><script src="js/api.js"></script><script src="js/config.js"></script><script src="js/app.js"></script>
+</body>
+</html>

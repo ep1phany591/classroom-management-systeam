@@ -1,0 +1,9 @@
+﻿backend/target/
+.idea/
+*.log
+*.class
+*.jar
+*.war
+.DS_Store
+node_modules/
+.env

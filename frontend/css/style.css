@@ -1,0 +1,78 @@
+/* ===== 全局 ===== */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, 'Microsoft YaHei', sans-serif; background: #f5f5f5; color: #1f2937; }
+#app { min-height: 100vh; }
+
+/* ===== 登录 ===== */
+.login-container {
+    display: flex; justify-content: center; align-items: center; min-height: 100vh;
+    background: #f5f5f5;
+}
+.login-box {
+    width: 380px; padding: 40px 32px; background: #fff; border-radius: 8px;
+    border: 1px solid #e5e7eb;
+}
+.login-box h2 { text-align: center; font-size: 20px; font-weight: 600; color: #111827; margin-bottom: 32px; }
+.login-box .el-form-item { margin-bottom: 20px; }
+.login-hint { text-align: center; color: #9ca3af; font-size: 12px; margin-top: 16px; }
+
+/* ===== 顶部导航栏 ===== */
+.top-nav {
+    background: #fff; border-bottom: 1px solid #e5e7eb;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 24px; height: 52px; position: sticky; top: 0; z-index: 100;
+}
+.top-nav .brand { font-size: 16px; font-weight: 600; color: #111827; white-space: nowrap; }
+.top-nav .nav-center { flex: 1; display: flex; justify-content: center; }
+.top-nav .nav-right { display: flex; align-items: center; gap: 12px; white-space: nowrap; }
+.top-nav .nav-right span { font-size: 13px; color: #6b7280; }
+
+/* ===== 水平菜单覆盖 ===== */
+.top-nav .el-menu--horizontal {
+    border-bottom: none !important; background: transparent;
+    display: flex; align-items: center;
+}
+.top-nav .el-menu--horizontal > .el-menu-item,
+.top-nav .el-menu--horizontal > .el-sub-menu .el-sub-menu__title {
+    height: 50px; line-height: 50px; font-size: 13px; color: #4b5563;
+    border-bottom: 2px solid transparent !important;
+}
+.top-nav .el-menu--horizontal > .el-menu-item:hover,
+.top-nav .el-menu--horizontal > .el-sub-menu:hover .el-sub-menu__title {
+    color: #0d9488; background: transparent;
+}
+.top-nav .el-menu--horizontal > .el-menu-item.is-active {
+    color: #0d9488; border-bottom-color: #0d9488 !important;
+}
+
+/* ===== 主内容区 ===== */
+.main-content {
+    max-width: 1200px; margin: 0 auto; padding: 20px 24px;
+}
+
+/* ===== 卡片 & 表格 ===== */
+.search-bar { margin-bottom: 14px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.table-card {
+    background: #fff; padding: 18px; border-radius: 8px;
+    border: 1px solid #e5e7eb;
+}
+
+/* ===== 统计卡片 ===== */
+.stat-card {
+    text-align: center; padding: 20px 16px; background: #fff;
+    border: 1px solid #e5e7eb; border-radius: 8px; margin-bottom: 14px;
+}
+.stat-card .num { font-size: 28px; font-weight: 700; color: #0d9488; }
+.stat-card .label { font-size: 13px; color: #9ca3af; margin-top: 6px; }
+
+/* ===== 弹窗 ===== */
+.dialog-footer { display: flex; justify-content: flex-end; gap: 8px; }
+
+/* ===== Element Plus 覆盖 ===== */
+.el-button--primary { background: #0d9488; border-color: #0d9488; }
+.el-button--primary:hover { background: #0f766e; border-color: #0f766e; }
+.el-table { font-size: 13px; }
+.el-table th { background: #f9fafb !important; color: #6b7280; font-weight: 500; }
+.el-dialog { border-radius: 8px; }
+.el-dialog__header { border-bottom: 1px solid #f3f4f6; padding-bottom: 12px; }
+.el-tag { border-radius: 4px; }
